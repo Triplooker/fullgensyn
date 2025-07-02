@@ -222,9 +222,12 @@ else
     cp "$ROOT/rgym_exp/config/rg-swarm.yaml" "$ROOT/configs/rg-swarm.yaml"
 fi
 
-# AUTO: Изменяем num_train_samples в конфиге
-echo_green ">> Изменяем num_train_samples с 2 на 1..."
-sed -i -E 's/(num_train_samples:\s*)2/\11/' "$ROOT/configs/rg-swarm.yaml" 2>/dev/null || echo "Конфигурационный файл еще не создан"
+# AUTO: Изменяем num_train_samples в ОБОИХ конфигурационных файлах
+echo_green ">> Изменяем num_train_samples с любого числа на 1 в оригинальном конфиге..."
+sed -i -E 's/(num_train_samples:[[:space:]]*)[0-9]+/\11/' "$ROOT/rgym_exp/config/rg-swarm.yaml" 2>/dev/null || echo "Оригинальный конфигурационный файл недоступен"
+
+echo_green ">> Изменяем num_train_samples с любого числа на 1 в пользовательском конфиге..."
+sed -i -E 's/(num_train_samples:[[:space:]]*)[0-9]+/\11/' "$ROOT/configs/rg-swarm.yaml" 2>/dev/null || echo "Пользовательский конфигурационный файл еще не создан"
 
 if [ -n "$DOCKER" ]; then
     # Make it easier to edit the configs on Linux systems.
@@ -248,8 +251,11 @@ echo_blue ">> And remember to star the repo on GitHub! --> https://github.com/ge
 echo_green ">> Применяем финальные настройки..."
 # Изменяем timeout в hivemind после установки
 sed -i 's/startup_timeout: float = 15/startup_timeout: float = 120/g' "$(python3 -c 'import hivemind.p2p.p2p_daemon as m; print(m.__file__)' 2>/dev/null || echo '/dev/null')" 2>/dev/null || echo "Не удалось найти hivemind модуль"
-# Еще раз проверяем изменение num_train_samples
-sed -i -E 's/(num_train_samples:\s*)2/\11/' "$ROOT/configs/rg-swarm.yaml" 2>/dev/null || echo "Конфигурационный файл недоступен"
+
+# Еще раз проверяем изменение num_train_samples в ОБОИХ файлах после установки
+echo_green ">> Финальная проверка и изменение num_train_samples..."
+sed -i -E 's/(num_train_samples:[[:space:]]*)[0-9]+/\11/' "$ROOT/rgym_exp/config/rg-swarm.yaml" 2>/dev/null || echo "Оригинальный конфигурационный файл недоступен"
+sed -i -E 's/(num_train_samples:[[:space:]]*)[0-9]+/\11/' "$ROOT/configs/rg-swarm.yaml" 2>/dev/null || echo "Пользовательский конфигурационный файл недоступен"
 
 python -m rgym_exp.runner.swarm_launcher \
     --config-path "$ROOT/rgym_exp/config" \

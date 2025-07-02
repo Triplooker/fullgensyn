@@ -190,16 +190,15 @@ if [ "$CONNECT_TO_TESTNET" = true ]; then
 fi
 
 echo_green ">> Getting requirements..."
-# Автоматическая правка timeout в hivemind
-sed -i 's/startup_timeout: float = 15/startup_timeout: float = 120/g' "$(python3 -c 'import hivemind.p2p.p2p_daemon as m; print(m.__file__)')"
-
 pip install --upgrade pip
 
 # echo_green ">> Installing GenRL..."
 pip install gensyn-genrl==0.1.4
 pip install reasoning-gym>=0.1.20 # for reasoning gym env
 pip install trl # for grpo config, will be deprecated soon
-pip install hivemind@git+https://github.com/learning-at-home/hivemind@4d5c41495be082490ea44cce4e9dd58f9926bb4e # We need the latest, 1.1.11 is broken
+pip install hivemind@git+https://github.com/learning-at-home/hivemind@4d5c41495be082490ea44cce4e9dd58f9926bb4e
+# Патчим timeout после установки hivemind
+sed -i 's/startup_timeout: float = 15/startup_timeout: float = 120/g' "$(python3 -c 'import hivemind.p2p.p2p_daemon as m; print(m.__file__)')"  # We need the latest, 1.1.11 is broken
 
 
 if [ ! -d "$ROOT/configs" ]; then
@@ -214,15 +213,11 @@ if [ -f "$ROOT/configs/rg-swarm.yaml" ]; then
             echo_green ">> Found differences in rg-swarm.yaml. Backing up existing config."
             mv "$ROOT/configs/rg-swarm.yaml" "$ROOT/configs/rg-swarm.yaml.bak"
             cp "$ROOT/rgym_exp/config/rg-swarm.yaml" "$ROOT/configs/rg-swarm.yaml"
-# Установка num_train_samples = 1
-sed -i -E 's/(num_train_samples:\s*)2/\11/' "$ROOT/configs/rg-swarm.yaml"
         fi
     fi
 else
     # If the config doesn't exist, just copy it.
     cp "$ROOT/rgym_exp/config/rg-swarm.yaml" "$ROOT/configs/rg-swarm.yaml"
-# Установка num_train_samples = 1
-sed -i -E 's/(num_train_samples:\s*)2/\11/' "$ROOT/configs/rg-swarm.yaml"
 fi
 
 if [ -n "$DOCKER" ]; then
@@ -232,9 +227,32 @@ fi
 
 echo_green ">> Done!"
 
-export HUGGINGFACE_ACCESS_TOKEN="None"
-export MODEL_NAME=""
-echo_green ">> Using default model from config"
+HF_TOKEN=${HF_TOKEN:-""}
+if [ -n "${HF_TOKEN}" ]; then # Check if HF_TOKEN is already set and use if so. Else give user a prompt to choose.
+    HUGGINGFACE_ACCESS_TOKEN=${HF_TOKEN}
+else
+    echo -en $GREEN_TEXT
+    read -p ">> Would you like to push models you train in the RL swarm to the Hugging Face Hub? [y/N] " yn
+    echo -en $RESET_TEXT
+    yn=${yn:-N} # Default to "N" if the user presses Enter
+    case $yn in
+        [Yy]*) read -p "Enter your Hugging Face access token: " HUGGINGFACE_ACCESS_TOKEN ;;
+        [Nn]*) HUGGINGFACE_ACCESS_TOKEN="None" ;;
+        *) echo ">>> No answer was given, so NO models will be pushed to Hugging Face Hub" && HUGGINGFACE_ACCESS_TOKEN="None" ;;
+    esac
+fi
+
+echo -en $GREEN_TEXT
+read -p ">> Enter the name of the model you want to use in huggingface repo/name format, or press [Enter] to use the default model. " MODEL_NAME
+echo -en $RESET_TEXT
+
+# Only export MODEL_NAME if user provided a non-empty value
+if [ -n "$MODEL_NAME" ]; then
+    export MODEL_NAME
+    echo_green ">> Using model: $MODEL_NAME"
+else
+    echo_green ">> Using default model from config"
+fi
 
 echo_green ">> Good luck in the swarm!"
 echo_blue ">> And remember to star the repo on GitHub! --> https://github.com/gensyn-ai/rl-swarm"

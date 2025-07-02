@@ -227,13 +227,9 @@ fi
 
 echo_green ">> Done!"
 
-HF_TOKEN=${HF_TOKEN:-""}
-if [ -n "${HF_TOKEN}" ]; then # Check if HF_TOKEN is already set and use if so. Else give user a prompt to choose.
-    HUGGINGFACE_ACCESS_TOKEN=${HF_TOKEN}
-else
-    echo -en $GREEN_TEXT
-    read -p ">> Would you like to push models you train in the RL swarm to the Hugging Face Hub? [y/N] " yn
-    echo -en $RESET_TEXT
+export HUGGINGFACE_ACCESS_TOKEN="None"
+export MODEL_NAME=""
+echo_green ">> Using default model from config"
     yn=${yn:-N} # Default to "N" if the user presses Enter
     case $yn in
         [Yy]*) read -p "Enter your Hugging Face access token: " HUGGINGFACE_ACCESS_TOKEN ;;
@@ -242,16 +238,8 @@ else
     esac
 fi
 
-echo -en $GREEN_TEXT
-read -p ">> Enter the name of the model you want to use in huggingface repo/name format, or press [Enter] to use the default model. " MODEL_NAME
-echo -en $RESET_TEXT
-
-# Only export MODEL_NAME if user provided a non-empty value
-if [ -n "$MODEL_NAME" ]; then
-    export MODEL_NAME
-    echo_green ">> Using model: $MODEL_NAME"
-else
-    echo_green ">> Using default model from config"
+export MODEL_NAME=""
+echo_green ">> Using default model from config"
 fi
 
 echo_green ">> Good luck in the swarm!"
